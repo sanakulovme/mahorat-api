@@ -17,8 +17,8 @@ return new class extends Migration
             $table->text('body')->comment('Content of the post');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('status');
-            $table->timestamp('created_at')->useCurrent();
             $table->string('url');
+            $table->timestamps();
         });
     }
 
