@@ -14,7 +14,7 @@ class Post extends Model
         'body',
         'user_id',
         'status',
-        'url',
+        'image',
     ];
 
    protected $table = 'posts';

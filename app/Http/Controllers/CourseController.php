@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Course;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
@@ -43,12 +44,22 @@ class CourseController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'url' => 'required|string|max:255',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'level' => 'required|string|max:100',
             'duration' => 'required|integer|min:1',
         ]);
 
-        $course = Course::create($request->all());
+        $data = $request->all();
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->storeAs('public/courses', $imageName);
+            $data['image'] = 'storage/courses/' . $imageName;
+        }
+
+        $course = Course::create($data);
 
         return response()->json([
             'ok' => true,
@@ -65,13 +76,28 @@ class CourseController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'url' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'level' => 'required|string|max:100',
             'duration' => 'required|integer|min:1',
         ]);
 
         $course = Course::find($request->id);
-        $course->update($request->except('id'));
+        $data = $request->except(['id', 'image']);
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($course->image && Storage::exists('public/' . str_replace('storage/', '', $course->image))) {
+                Storage::delete('public/' . str_replace('storage/', '', $course->image));
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->storeAs('public/courses', $imageName);
+            $data['image'] = 'storage/courses/' . $imageName;
+        }
+
+        $course->update($data);
 
         return response()->json([
             'ok' => true,
@@ -90,6 +116,11 @@ class CourseController extends Controller
                 'ok' => false,
                 'message' => 'Course not found'
             ], 404);
+        }
+
+        // Delete associated image
+        if ($course->image && Storage::exists('public/' . str_replace('storage/', '', $course->image))) {
+            Storage::delete('public/' . str_replace('storage/', '', $course->image));
         }
 
         $course->delete();

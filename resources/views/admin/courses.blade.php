@@ -44,7 +44,7 @@
                 <h3 class="text-lg font-semibold text-gray-900" id="modal-title">Add Course</h3>
             </div>
             
-            <form id="course-form" class="p-6">
+            <form id="course-form" class="p-6" enctype="multipart/form-data">
                 <input type="hidden" id="course-id">
                 
                 <div class="space-y-4">
@@ -81,8 +81,14 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">URL</label>
-                        <input type="url" id="course-url" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label class="block text-sm font-medium text-gray-700">Image</label>
+                        <input type="file" id="course-image" accept="image/*" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-sm text-gray-500">Accepted formats: JPEG, PNG, JPG, GIF (max 2MB)</p>
+                    </div>
+                    
+                    <div id="current-image-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700">Current Image</label>
+                        <img id="current-image" src="" alt="Current course image" class="mt-2 w-32 h-32 object-cover rounded-md">
                     </div>
                 </div>
                 
@@ -172,6 +178,7 @@ function openCreateModal() {
     document.getElementById('modal-title').textContent = 'Add Course';
     document.getElementById('course-form').reset();
     document.getElementById('course-id').value = '';
+    document.getElementById('current-image-container').classList.add('hidden');
     document.getElementById('course-modal').classList.remove('hidden');
 }
 
@@ -186,7 +193,14 @@ function editCourse(courseId) {
     document.getElementById('course-price').value = course.price;
     document.getElementById('course-duration').value = course.duration;
     document.getElementById('course-level').value = course.level;
-    document.getElementById('course-url').value = course.url;
+    
+    // Show current image if exists
+    if (course.image) {
+        document.getElementById('current-image').src = '/' + course.image;
+        document.getElementById('current-image-container').classList.remove('hidden');
+    } else {
+        document.getElementById('current-image-container').classList.add('hidden');
+    }
     
     document.getElementById('course-modal').classList.remove('hidden');
 }
@@ -197,30 +211,38 @@ function closeModal() {
 
 function saveCourse() {
     const courseId = document.getElementById('course-id').value;
-    const formData = {
-        name: document.getElementById('course-name').value,
-        description: document.getElementById('course-description').value,
-        price: parseFloat(document.getElementById('course-price').value),
-        duration: parseInt(document.getElementById('course-duration').value),
-        level: document.getElementById('course-level').value,
-        url: document.getElementById('course-url').value
-    };
+    const formData = new FormData();
+    
+    formData.append('name', document.getElementById('course-name').value);
+    formData.append('description', document.getElementById('course-description').value);
+    formData.append('price', document.getElementById('course-price').value);
+    formData.append('duration', document.getElementById('course-duration').value);
+    formData.append('level', document.getElementById('course-level').value);
+    
+    const imageFile = document.getElementById('course-image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
     
     const url = courseId ? '/api/course/update' : '/api/course/create';
     if (courseId) {
-        formData.id = courseId;
+        formData.append('id', courseId);
     }
     
-    axios.post(url, formData)
-        .then(response => {
-            showToast(response.data.message);
-            closeModal();
-            loadCourses();
-        })
-        .catch(error => {
-            console.error('Error saving course:', error);
-            showToast('Error saving course', 'error');
-        });
+    axios.post(url, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    .then(response => {
+        showToast(response.data.message);
+        closeModal();
+        loadCourses();
+    })
+    .catch(error => {
+        console.error('Error saving course:', error);
+        showToast('Error saving course', 'error');
+    });
 }
 
 function deleteCourse(courseId) {

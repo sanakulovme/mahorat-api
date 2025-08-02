@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Post;
+use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
@@ -44,10 +45,20 @@ class PostController extends Controller
             'body' => 'required|string',
             'user_id' => 'required|exists:users,id',
             'status' => 'required|string|in:draft,published,archived',
-            'url' => 'required|string|max:255',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $post = Post::create($request->all());
+        $data = $request->all();
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->storeAs('public/posts', $imageName);
+            $data['image'] = 'storage/posts/' . $imageName;
+        }
+
+        $post = Post::create($data);
 
         return response()->json([
             'ok' => true,
@@ -65,11 +76,26 @@ class PostController extends Controller
             'body' => 'required|string',
             'user_id' => 'required|exists:users,id',
             'status' => 'required|string|in:draft,published,archived',
-            'url' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $post = Post::find($request->id);
-        $post->update($request->except('id'));
+        $data = $request->except(['id', 'image']);
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($post->image && Storage::exists('public/' . str_replace('storage/', '', $post->image))) {
+                Storage::delete('public/' . str_replace('storage/', '', $post->image));
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->storeAs('public/posts', $imageName);
+            $data['image'] = 'storage/posts/' . $imageName;
+        }
+
+        $post->update($data);
 
         return response()->json([
             'ok' => true,
@@ -88,6 +114,11 @@ class PostController extends Controller
                 'ok' => false,
                 'message' => 'Post not found'
             ], 404);
+        }
+
+        // Delete associated image
+        if ($post->image && Storage::exists('public/' . str_replace('storage/', '', $post->image))) {
+            Storage::delete('public/' . str_replace('storage/', '', $post->image));
         }
 
         $post->delete();

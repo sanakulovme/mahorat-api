@@ -44,7 +44,7 @@
                 <h3 class="text-lg font-semibold text-gray-900" id="modal-title">Add Post</h3>
             </div>
             
-            <form id="post-form" class="p-6">
+            <form id="post-form" class="p-6" enctype="multipart/form-data">
                 <input type="hidden" id="post-id">
                 
                 <div class="space-y-4">
@@ -70,9 +70,15 @@
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">URL</label>
-                            <input type="url" id="post-url" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <label class="block text-sm font-medium text-gray-700">Image</label>
+                            <input type="file" id="post-image" accept="image/*" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <p class="mt-1 text-sm text-gray-500">Accepted formats: JPEG, PNG, JPG, GIF (max 2MB)</p>
                         </div>
+                    </div>
+                    
+                    <div id="current-image-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700">Current Image</label>
+                        <img id="current-image" src="" alt="Current post image" class="mt-2 w-32 h-32 object-cover rounded-md">
                     </div>
                 </div>
                 
@@ -169,6 +175,7 @@ function openCreateModal() {
     document.getElementById('modal-title').textContent = 'Add Post';
     document.getElementById('post-form').reset();
     document.getElementById('post-id').value = '';
+    document.getElementById('current-image-container').classList.add('hidden');
     document.getElementById('post-modal').classList.remove('hidden');
 }
 
@@ -181,7 +188,14 @@ function editPost(postId) {
     document.getElementById('post-title').value = post.title;
     document.getElementById('post-body').value = post.body;
     document.getElementById('post-status').value = post.status;
-    document.getElementById('post-url').value = post.url;
+    
+    // Show current image if exists
+    if (post.image) {
+        document.getElementById('current-image').src = '/' + post.image;
+        document.getElementById('current-image-container').classList.remove('hidden');
+    } else {
+        document.getElementById('current-image-container').classList.add('hidden');
+    }
     
     document.getElementById('post-modal').classList.remove('hidden');
 }
@@ -192,29 +206,37 @@ function closeModal() {
 
 function savePost() {
     const postId = document.getElementById('post-id').value;
-    const formData = {
-        title: document.getElementById('post-title').value,
-        body: document.getElementById('post-body').value,
-        status: document.getElementById('post-status').value,
-        url: document.getElementById('post-url').value,
-        user_id: currentUser ? currentUser.id : 1 // Default to user ID 1 if not available
-    };
+    const formData = new FormData();
+    
+    formData.append('title', document.getElementById('post-title').value);
+    formData.append('body', document.getElementById('post-body').value);
+    formData.append('status', document.getElementById('post-status').value);
+    formData.append('user_id', currentUser ? currentUser.id : 1); // Default to user ID 1 if not available
+    
+    const imageFile = document.getElementById('post-image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
     
     const url = postId ? '/api/post/update' : '/api/post/create';
     if (postId) {
-        formData.id = postId;
+        formData.append('id', postId);
     }
     
-    axios.post(url, formData)
-        .then(response => {
-            showToast(response.data.message);
-            closeModal();
-            loadPosts();
-        })
-        .catch(error => {
-            console.error('Error saving post:', error);
-            showToast('Error saving post', 'error');
-        });
+    axios.post(url, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    .then(response => {
+        showToast(response.data.message);
+        closeModal();
+        loadPosts();
+    })
+    .catch(error => {
+        console.error('Error saving post:', error);
+        showToast('Error saving post', 'error');
+    });
 }
 
 function deletePost(postId) {

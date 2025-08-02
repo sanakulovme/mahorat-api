@@ -13,7 +13,7 @@ class Course extends Model
         'name',
         'description',
         'price',
-        'url',
+        'image',
         'level',
         'duration',
     ];
