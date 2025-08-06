@@ -22,4 +22,15 @@ class SiteController extends Controller
             'message' => 'Malumotlaringiz qabul qilindi',
         ], 200);
     }
+
+    function getAll(Request $request) 
+    {
+        $contacts = Contact::all();
+
+        return response()->json([
+            'ok' => true,
+            'data' => $contacts,
+        ], 200);
+        
+    }
 }

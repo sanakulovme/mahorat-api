@@ -54,4 +54,5 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/courses', [CourseController::class, 'showAll']);
 Route::get('/posts', [PostController::class, 'showAll']);
 Route::post('/contacts', [SiteController::class, 'setContacts']);
+Route::get('/contacts', [SiteController::class, 'getAll']);
 
